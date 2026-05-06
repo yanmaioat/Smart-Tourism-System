@@ -2,18 +2,18 @@
   <div class="main-container">
     <!-- 选择交通方式 -->
     <div class="transport-options">
-      <label :class="['transport-option', { selected: transportMode === 'driving' }]">
-        <input type="radio" v-model="transportMode" value="driving" class="transport-radio" />
+      <label :class="['transport-option', { selected: localTransportMode === 'driving' }]">
+        <input type="radio" v-model="localTransportMode" value="driving" class="transport-radio" />
         <i class="icon driving"></i>
         <span>驾车</span>
       </label>
-      <label :class="['transport-option', { selected: transportMode === 'walking' }]">
-        <input type="radio" v-model="transportMode" value="walking" class="transport-radio" />
+      <label :class="['transport-option', { selected: localTransportMode === 'walking' }]">
+        <input type="radio" v-model="localTransportMode" value="walking" class="transport-radio" />
         <i class="icon walking"></i>
         <span>步行</span>
       </label>
-      <label :class="['transport-option', { selected: transportMode === 'transit' }]">
-        <input type="radio" v-model="transportMode" value="transit" class="transport-radio" />
+      <label :class="['transport-option', { selected: localTransportMode === 'transit' }]">
+        <input type="radio" v-model="localTransportMode" value="transit" class="transport-radio" />
         <i class="icon transit"></i>
         <span>公共交通</span>
       </label>
@@ -21,8 +21,8 @@
 
     <!-- 输入起点和终点 -->
     <div class="inputs-container">
-      <input v-model="origin" placeholder="请输入起点" class="input-field" />
-      <input v-model="destination" placeholder="请输入终点" class="input-field" />
+      <input v-model="localOrigin" placeholder="请输入起点" class="input-field" />
+      <input v-model="localDestination" placeholder="请输入终点" class="input-field" />
       <button @click="getRoute" class="search-button">查询路线</button>
     </div>
 
@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 
 const props = defineProps({
   origin: {
@@ -60,18 +60,36 @@ const props = defineProps({
   }
 });
 
+const emit = defineEmits(['update:origin', 'update:destination', 'update:transportMode', 'update:route']);
+
+// 本地状态
+const localOrigin = ref(props.origin);
+const localDestination = ref(props.destination);
+const localTransportMode = ref(props.transportMode);
+const localRoute = ref(props.route);
+
+// 监听 props 变化
+watch(() => props.origin, (val) => localOrigin.value = val);
+watch(() => props.destination, (val) => localDestination.value = val);
+watch(() => props.transportMode, (val) => localTransportMode.value = val);
+watch(() => props.route, (val) => localRoute.value = val);
+
+// 监听本地变化，emit 给父组件
+watch(localOrigin, (val) => emit('update:origin', val));
+watch(localDestination, (val) => emit('update:destination', val));
+watch(localTransportMode, (val) => emit('update:transportMode', val));
+watch(localRoute, (val) => emit('update:route', val));
+
 const handleMapError = () => {
   console.warn('百度地图资源加载失败，这可能是由于广告拦截器导致的，不影响主要功能')
 }
 
 onMounted(() => {
   try {
-    // 原有的地图初始化代码
     window.init = () => {
       // 地图初始化代码
     }
     
-    // 添加脚本加载错误处理
     const script = document.createElement('script')
     script.src = `https://api.map.baidu.com/api?v=3.0&ak=YOUR_API_KEY&callback=init`
     script.onerror = handleMapError
@@ -82,35 +100,30 @@ onMounted(() => {
 })
 
 const getRoute = () => {
-  // 如果起点或终点为空，则提醒用户填写
-  if (!props.origin || !props.destination) {
+  if (!localOrigin.value || !localDestination.value) {
     alert("请填写完整的起点和终点！");
     return;
   }
 
-  // 创建地理编码实例，用来解析起点和终点地址
   const geocoder = new BMap.Geocoder();
 
-  // 获取起点的经纬度
-  geocoder.getPoint(props.origin, (point) => {
+  geocoder.getPoint(localOrigin.value, (point) => {
     if (!point) {
-      alert(`无法解析起点地址：${props.origin}，请检查地址格式`);
+      alert(`无法解析起点地址：${localOrigin.value}，请检查地址格式`);
       return;
     }
 
-    // 获取终点的经纬度
-    geocoder.getPoint(props.destination, (destPoint) => {
+    geocoder.getPoint(localDestination.value, (destPoint) => {
       if (!destPoint) {
-        alert(`无法解析终点地址：${props.destination}，请检查地址格式`);
+        alert(`无法解析终点地址：${localDestination.value}，请检查地址格式`);
         return;
       }
 
-      // 根据选择的交通方式，调用相应的路线查询方法
-      if (props.transportMode === "driving") {
+      if (localTransportMode.value === "driving") {
         searchDrivingRoute(point, destPoint);
-      } else if (props.transportMode === "walking") {
+      } else if (localTransportMode.value === "walking") {
         searchWalkingRoute(point, destPoint);
-      } else if (props.transportMode === "transit") {
+      } else if (localTransportMode.value === "transit") {
         searchTransitRoute(point, destPoint);
       }
     });
@@ -118,52 +131,49 @@ const getRoute = () => {
 }
 
 const searchDrivingRoute = (origin, destination) => {
-  props.route = new BMap.DrivingRoute(props.map, {
+  localRoute.value = new BMap.DrivingRoute(props.map, {
     renderOptions: {
-      map: props.map, // 在地图上显示路线
-      panel: "results", // 在指定的元素中显示路线详情
-      autoViewport: true // 自动调整视图，使整个路线都能显示
+      map: props.map,
+      panel: "results",
+      autoViewport: true
     },
-    onSearchComplete: onRouteSearchComplete // 路线查询完成后的回调函数
+    onSearchComplete: onRouteSearchComplete
   });
-  props.route.search(origin, destination); // 发起驾车路线查询
+  localRoute.value.search(origin, destination);
 }
 
 const searchWalkingRoute = (origin, destination) => {
-  props.route = new BMap.WalkingRoute(props.map, {
+  localRoute.value = new BMap.WalkingRoute(props.map, {
     renderOptions: {
-      map: props.map, // 在地图上显示路线
-      panel: "results", // 在指定的元素中显示路线详情
-      autoViewport: true // 自动调整视图，使整个路线都能显示
+      map: props.map,
+      panel: "results",
+      autoViewport: true
     },
-    onSearchComplete: onRouteSearchComplete // 路线查询完成后的回调函数
+    onSearchComplete: onRouteSearchComplete
   });
-  props.route.search(origin, destination); // 发起步行路线查询
+  localRoute.value.search(origin, destination);
 }
 
 const searchTransitRoute = (origin, destination) => {
-  props.route = new BMap.TransitRoute(props.map, {
+  localRoute.value = new BMap.TransitRoute(props.map, {
     renderOptions: {
-      map: props.map, // 在地图上显示路线
-      panel: "results", // 在指定的元素中显示路线详情
-      autoViewport: true // 自动调整视图，使整个路线都能显示
+      map: props.map,
+      panel: "results",
+      autoViewport: true
     },
-    onSearchComplete: onRouteSearchComplete // 路线查询完成后的回调函数
+    onSearchComplete: onRouteSearchComplete
   });
-  props.route.search(origin, destination); // 发起公共交通路线查询
+  localRoute.value.search(origin, destination);
 }
 
 const onRouteSearchComplete = (results) => {
-  // 如果路线查询成功
-  if (props.route.getStatus() === BMAP_STATUS_SUCCESS) {
-    let steps = []; // 存储步骤的数组
-    if (props.transportMode === "walking") {
-      // 如果是步行路线，获取第一条方案
+  if (localRoute.value.getStatus() === BMAP_STATUS_SUCCESS) {
+    let steps = [];
+    if (localTransportMode.value === "walking") {
       const plan = results.getPlan(0);
       const route = plan.getRoute(0);
       steps.push(`步行：${route.getDistance()} 米`);
-    } else if (props.transportMode === "transit") {
-      // 如果是公共交通路线
+    } else if (localTransportMode.value === "transit") {
       const plan = results.getPlan(0);
       for (let i = 0; i < plan.getNumRoutes(); i++) {
         const walk = plan.getRoute(i);
@@ -173,7 +183,6 @@ const onRouteSearchComplete = (results) => {
       }
     }
 
-    // 显示路线的步骤
     document.getElementById("results").innerHTML = steps.join("<br>");
   } else {
     alert("路线查询失败，请检查起点和终点！");
@@ -182,25 +191,22 @@ const onRouteSearchComplete = (results) => {
 </script>
 
 <style scoped>
-/* 设置主容器的布局 */
+/* 样式保持不变 */
 .main-container {
   display: flex;
   flex-direction: column;
-  align-items: center; /* 水平居中 */
-  justify-content: center; /* 垂直居中 */
-  min-height: 100vh; /* 满屏显示 */
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
   padding: 20px;
 }
 
-/* 设置地图容器的样式 */
 .map-container {
-  width: 80%; /* 将地图宽度调整为 70% */
-  height: 600px; /* 地图的高度保持 500px */
+  width: 80%;
+  height: 600px;
   margin-top: 20px;
 }
 
-
-/* 输入框和按钮的样式 */
 .input-field {
   width: 250px;
   padding: 10px;
@@ -230,10 +236,9 @@ const onRouteSearchComplete = (results) => {
   background-color: #45a049;
 }
 
-/* 交通方式选择的样式 */
 .transport-options {
   display: flex;
-  justify-content: center; /* 交通方式选择居中 */
+  justify-content: center;
   align-items: center;
   padding: 0;
   margin-bottom: 20px;
@@ -262,7 +267,7 @@ const onRouteSearchComplete = (results) => {
 }
 
 .transport-radio {
-  display: none; /* 隐藏原始单选框 */
+  display: none;
 }
 
 .transport-option .icon {
@@ -286,18 +291,16 @@ const onRouteSearchComplete = (results) => {
   background-size: 18px 18px;
 }
 
-/* 路线规划结果样式 */
 .results-panel {
   margin-top: 20px;
   padding: 15px;
   border: 1px solid #ddd;
   background-color: #f9f9f9;
-  width: 80%; /* 增加显示宽度 */
-  max-height: 400px; /* 设置最大高度 */
-  overflow-y: auto; /* 如果内容超出，允许垂直滚动 */
-  font-size: 14px; /* 调整字体大小 */
-  line-height: 1.6; /* 增加行间距，便于阅读 */
-  border-radius: 8px; /* 增加圆角，提升美观 */
+  width: 80%;
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.6;
+  border-radius: 8px;
 }
-
 </style>
