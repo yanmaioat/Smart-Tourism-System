@@ -1,0 +1,88 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.TrainMapper">
+
+    <select id="selectAll" resultType="com.example.entity.Train">
+        select * from `train`
+        <where>
+            <if test="name != null"> and name like concat('%', #{name}, '%')</if>
+        </where>
+        order by train.id desc
+    </select>
+
+    <delete id="deleteById">
+        delete from `train`
+        where id = #{id}
+    </delete>
+
+
+
+    <insert id="insert" parameterType="com.example.entity.Train" useGeneratedKeys="true">
+        insert into train
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="name != null">name,</if>
+            <if test="img != null">img,</if>
+            <if test="departureTime != null">departure_time,</if>
+            <if test="parkingTime != null">parking_time,</if>
+            <if test="station != null">station,</if>
+            <if test="price != null">price,</if>
+            <if test="store != null">store,</if>
+            <if test="startingStation != null">starting_station,</if>
+            <if test="terminatingStation != null">terminating_station,</if>
+            <if test="date != null">date,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id},</if>
+            <if test="name != null">#{name},</if>
+            <if test="img != null">#{img},</if>
+            <if test="departureTime != null">#{departureTime},</if>
+            <if test="parkingTime != null">#{parkingTime},</if>
+            <if test="station != null">#{station},</if>
+            <if test="price != null">#{price},</if>
+            <if test="store != null">#{store},</if>
+            <if test="startingStation != null">#{startingStation},</if>
+            <if test="terminatingStation != null">#{terminatingStation},</if>
+            <if test="date != null">#{date},</if>
+        </trim>
+    </insert>
+
+    <update id="updateById" parameterType="com.example.entity.Train">
+        update train
+        <set>
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="img != null">
+                img = #{img},
+            </if>
+            <if test="departureTime != null">
+                departure_time = #{departureTime},
+            </if>
+            <if test="parkingTime != null">
+                parking_time = #{parkingTime},
+            </if>
+            <if test="station != null">
+                station = #{station},
+            </if>
+            <if test="price != null">
+                price = #{price},
+            </if>
+            <if test="store != null">
+                store = #{store},
+            </if>
+            <if test="startingStation != null">
+                starting_station = #{startingStation},
+            </if>
+            <if test="terminatingStation != null">
+                terminating_station = #{terminatingStation},
+            </if>
+            <if test="date != null">
+                date = #{date},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+</mapper>
