@@ -4,10 +4,10 @@ server:
 # 数据库配置
 spring:
   datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/xm_travel?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:你的本地密码}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
-    password: 123456
-    url: jdbc:mysql://localhost:3306/xm_travel?useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true&useSSL=false&serverTimezone=GMT%2b8&allowPublicKeyRetrieval=true
 
 # 配置mybatis实体和xml映射
 mybatis:
